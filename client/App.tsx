@@ -1,34 +1,61 @@
 import { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-function App() {
-  const [path, setPath] = useState(window.location.pathname);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      setPath(window.location.pathname);
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, []);
-
+function RoutePlaceholder({
+  name,
+}: {
+  name: string;
+}) {
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="flex min-h-screen items-center justify-center p-6">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight">
-            FlashLink
-          </h1>
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold tracking-tight">
+          FlashLink
+        </h1>
 
-          <p className="mt-3 text-muted-foreground">
-            {path === "/" ? "Create and share flashcards." : "Loading..."}
-          </p>
-        </div>
+        <p className="mt-2 text-muted-foreground">
+          {name}
+        </p>
       </div>
     </main>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={<RoutePlaceholder name="Home" />}
+        />
+
+        <Route
+          path="/create"
+          element={<RoutePlaceholder name="Create" />}
+        />
+
+        <Route
+          path="/study/:strategy/:data"
+          element={<RoutePlaceholder name="Study" />}
+        />
+
+        <Route
+          path="/test"
+          element={<RoutePlaceholder name="Test" />}
+        />
+
+        <Route
+          path="/review"
+          element={<RoutePlaceholder name="Review" />}
+        />
+
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
