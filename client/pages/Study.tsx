@@ -222,6 +222,8 @@ const {
   shuffle,
   toggleDifficult,
   difficultCards,
+  isCurrentCardDifficult,
+  difficultOnly,
   setDifficultOnly,
 } = useStudy(deck.cards);
 
@@ -249,10 +251,6 @@ const {
     // setDifficultOnly. This effect is intentionally
     // replaced below once we destructure it.
   }, []);
-
-  const isCurrentCardDifficult =
-    currentCard !== null &&
-    difficultCards.has(currentIndex);
 
   if (totalCards === 0) {
     return (
