@@ -12,6 +12,7 @@ import { useStudy } from "../hooks/useStudy";
 
 import { decodeDeck } from "../utils/compression";
 import { createStudyPath } from "../utils/url";
+import StudyComplete from "../components/study/StudyComplete";
 
 type StudyStatus =
   | "loading"
@@ -226,6 +227,8 @@ function StudyReady({
     isCurrentCardDifficult,
     difficultOnly,
     setDifficultOnly,
+    isComplete,
+    finish,
   } = useStudy(deck.cards);
 
   const handleDifficultOnly = () => {
