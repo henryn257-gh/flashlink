@@ -1,6 +1,7 @@
 import {
   useEffect,
   useState,
+  type KeyboardEvent,
   type ReactNode,
 } from "react";
 
@@ -55,9 +56,9 @@ function Card({
     onFlip?.(nextFlipped);
   };
 
-  const handleKeyDown = (
-    event: React.KeyboardEvent<HTMLDivElement>
-  ) => {
+const handleKeyDown = (
+  event: KeyboardEvent<HTMLDivElement>
+) => {
     if (
       event.key === " " ||
       event.key === "Enter"
