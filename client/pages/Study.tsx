@@ -11,6 +11,7 @@ import { useStudy } from "../hooks/useStudy";
 
 import { decodeDeck } from "../utils/compression";
 import { createStudyPath } from "../utils/url";
+import ProgressBar from "../components/common/ProgressBar";
 
 type StudyStatus =
   | "loading"
@@ -323,36 +324,11 @@ const {
 
         <section>
           {/* Progress */}
-          <div className="mb-6">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium">
-                Card {currentIndex + 1} of{" "}
-                {totalCards}
-              </span>
-
-              <span className="text-muted-foreground">
-                {Math.round(progress)}%
-              </span>
-            </div>
-
-            <div
-              className="h-2 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={Math.round(
-                progress
-              )}
-              aria-label="Study progress"
-            >
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-300"
-                style={{
-                  width: `${progress}%`,
-                }}
-              />
-            </div>
-          </div>
+          <ProgressBar
+  value={progress}
+  label={`Card ${currentIndex + 1} of ${totalCards}`}
+  className="mb-6"
+/>
 
           {/* Card */}
           {currentCard && (
