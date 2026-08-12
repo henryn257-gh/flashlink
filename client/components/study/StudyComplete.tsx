@@ -1,12 +1,10 @@
 interface StudyCompleteProps {
-  title?: string;
   totalCards: number;
   onRestart: () => void;
   onEdit?: () => void;
 }
 
 function StudyComplete({
-  title = "Study Complete!",
   totalCards,
   onRestart,
   onEdit,
@@ -18,7 +16,7 @@ function StudyComplete({
       </div>
 
       <h2 className="mt-5 text-2xl font-bold">
-        {title}
+        Study Complete!
       </h2>
 
       <p className="mt-2 text-muted-foreground">
