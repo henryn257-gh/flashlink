@@ -320,34 +320,49 @@ function StudyReady({
             className="mb-6"
           />
 
-          {currentCard && (
-            <Card
-              term={currentCard.term}
-              definition={
-                currentCard.definition
-              }
-            />
-          )}
+{isComplete ? (
+  <StudyComplete
+    totalCards={totalCards}
+    onRestart={restart}
+    onEdit={onEdit}
+  />
+) : (
+  <>
+    {currentCard && (
+      <Card
+        term={currentCard.term}
+        definition={currentCard.definition}
+      />
+    )}
 
-          <div className="mt-6 flex items-center justify-center gap-3">
-            <button
-              type="button"
-              onClick={previous}
-              disabled={isFirstCard}
-              className="rounded-lg border border-border px-5 py-3 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              ← Previous
-            </button>
+    <div className="mt-6 flex items-center justify-center gap-3">
+      <button
+        type="button"
+        onClick={previous}
+        disabled={isFirstCard}
+        className="rounded-lg border border-border px-5 py-3 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        ← Previous
+      </button>
 
-            <button
-              type="button"
-              onClick={next}
-              disabled={isLastCard}
-              className="rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Next →
-            </button>
-          </div>
+      <button
+        type="button"
+        onClick={
+          isLastCard ? finish : next
+        }
+        className="rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+      >
+        {isLastCard
+          ? "Finish ✓"
+          : "Next →"}
+      </button>
+    </div>
+
+    <div className="mt-6 flex flex-wrap justify-center gap-3">
+      {/* existing Shuffle / Restart / Difficult controls */}
+    </div>
+  </>
+)}
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
