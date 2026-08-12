@@ -115,13 +115,11 @@ if (!editValue) {
   return;
 }
 
+const editUrlValue = editValue;
+
 let cancelled = false;
 
 async function loadEditDeck() {
-
-  let cancelled = false;
-
-  async function loadEditDeck() {
     setIsLoadingEditDeck(true);
     setGenerationError(null);
 
