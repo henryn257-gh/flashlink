@@ -108,111 +108,124 @@ function Create() {
    * The compressed study URL contains the entire deck,
    * so editing does not require a database.
    */
-  useEffect(() => {
-    if (!editValue) {
-      setIsLoadingEditDeck(false);
-      return;
-    }
+useEffect(() => {
+  const editValue = searchParams.get("edit");
 
-    let cancelled = false;
+  if (!editValue) {
+    return;
+  }
 
-    async function loadEditDeck() {
-      setIsLoadingEditDeck(true);
-      setGenerationError(null);
+  let cancelled = false;
 
-      try {
-        const editUrl = new URL(
-          editValue,
-          window.location.origin
+  async function loadEditDeck() {
+    setIsLoadingEditDeck(true);
+    setGenerationError(null);
+
+    try {
+      /*
+       * `URLSearchParams.get()` already decodes the
+       * query parameter once.
+       *
+       * Example:
+       *
+       * /create?edit=%2Fstudy%2Fsingle%2FABC
+       *
+       * becomes:
+       *
+       * /study/single/ABC
+       */
+      const editUrl = new URL(
+        editValue,
+        window.location.origin
+      );
+
+      const parts = editUrl.pathname
+        .split("/")
+        .filter(Boolean);
+
+      if (
+        parts.length !== 3 ||
+        parts[0] !== "study"
+      ) {
+        throw new Error(
+          "The edit link is invalid."
         );
+      }
 
-        const parts = editUrl.pathname
-          .split("/")
-          .filter(Boolean);
+      const strategy = parts[1];
+      const data = parts[2];
 
-        /*
-         * Expected:
-         *
-         * ["study", strategy, data]
-         */
-        if (
-          parts.length !== 3 ||
-          parts[0] !== "study"
-        ) {
-          throw new Error(
-            "The edit link is invalid."
-          );
-        }
-
-        const strategy = parts[1];
-        const data = parts[2];
-
-        if (!isCompressionStrategy(strategy)) {
-          throw new Error(
-            "The edit link uses an unsupported compression strategy."
-          );
-        }
-
-        if (!data) {
-          throw new Error(
-            "The edit link is missing deck data."
-          );
-        }
-
-        const existingDeck =
-          await decodeDeck(
-            strategy,
-            data
-          );
-
-        if (cancelled) {
-          return;
-        }
-
-        setTitle(existingDeck.title ?? "");
-
-        setDescription(
-          existingDeck.description ?? ""
+      if (!isCompressionStrategy(strategy)) {
+        throw new Error(
+          "The edit link uses an unsupported compression strategy."
         );
+      }
 
-        setCards(
-          existingDeck.cards.length > 0
-            ? existingDeck.cards.map(
-                (card) => ({
-                  term: card.term,
-                  definition:
-                    card.definition,
-                })
-              )
-            : [createCard()]
+      if (!data) {
+        throw new Error(
+          "The edit link is missing deck data."
         );
+      }
 
-        invalidateGeneratedLink();
-      } catch (error) {
-        console.error(error);
+      /*
+       * Decode using the EXACT data from the study URL.
+       */
+      const existingDeck = await decodeDeck(
+        strategy,
+        data
+      );
 
-        if (cancelled) {
-          return;
-        }
+      if (cancelled) {
+        return;
+      }
 
-        setGenerationError(
-          error instanceof Error
-            ? error.message
-            : "Unable to load the deck for editing."
-        );
-      } finally {
-        if (!cancelled) {
-          setIsLoadingEditDeck(false);
-        }
+      setTitle(existingDeck.title);
+      setDescription(existingDeck.description);
+
+      setCards(
+        existingDeck.cards.length > 0
+          ? existingDeck.cards.map((card) => ({
+              term: card.term,
+              definition: card.definition,
+            }))
+          : [createCard()]
+      );
+
+      /*
+       * Editing means we are starting with the decoded
+       * deck, so there is no generated link yet.
+       */
+      setShareUrl(null);
+      setCopied(false);
+      setUrlLength(null);
+    } catch (error) {
+      console.error(
+        "Failed to load deck for editing:",
+        error
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setGenerationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load the deck for editing."
+      );
+    } finally {
+      if (!cancelled) {
+        setIsLoadingEditDeck(false);
       }
     }
+  }
 
-    void loadEditDeck();
+  void loadEditDeck();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [editValue]);
+  return () => {
+    cancelled = true;
+  };
+}, [searchParams]);
 
   const updateCard = (
     index: number,
