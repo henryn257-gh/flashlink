@@ -1,3 +1,16 @@
+import type {
+  CompressionStrategyName,
+} from "../utils/compression/types";
+
+function isCompressionStrategy(
+  value: string
+): value is CompressionStrategyName {
+  return (
+    value === "single" ||
+    value === "chain"
+  );
+}
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
