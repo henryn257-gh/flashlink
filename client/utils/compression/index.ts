@@ -1,8 +1,11 @@
 import type { Deck } from "../../../shared/deck";
+
 import type {
   CompressionResult,
   CompressionStrategy,
 } from "./types";
+
+import { chainCompression } from "./chain";
 import { singleCompression } from "./single";
 
 export const MAX_RECOMMENDED_URL_LENGTH = 8_000;
@@ -12,9 +15,17 @@ const strategies: Record<
   CompressionStrategy
 > = {
   single: singleCompression,
+  chain: chainCompression,
 };
 
-function getStudyUrl(
+function getUrlLength(
+  result: CompressionResult
+): number {
+  return `/study/${result.strategy}/${result.data}`
+    .length;
+}
+
+function getUrl(
   result: CompressionResult
 ): string {
   const origin =
@@ -28,37 +39,35 @@ function getStudyUrl(
 export async function encodeDeck(
   deck: Deck
 ): Promise<CompressionResult> {
-  const single = await singleCompression.encode(deck);
-
-  const singleUrl = getStudyUrl(single);
-
-  if (
-    singleUrl.length <=
-    MAX_RECOMMENDED_URL_LENGTH
-  ) {
-    return single;
-  }
-
   /*
-   * Chain compression will be added here.
+   * Every strategy gets the same Deck.
    *
-   * The important architectural decision is that callers
-   * never need to know whether a deck is using single or
-   * chained compression.
-   *
-   * When chainCompression is implemented:
-   *
-   * return chainCompression.encode(deck);
+   * This keeps the strategies independent and lets the
+   * manager decide which representation is best.
    */
+  const candidates = await Promise.all([
+    singleCompression.encode(deck),
+    chainCompression.encode(deck),
+  ]);
 
-  return single;
+  const best = candidates.reduce(
+    (smallest, candidate) => {
+      return getUrlLength(candidate) <
+        getUrlLength(smallest)
+        ? candidate
+        : smallest;
+    }
+  );
+
+  return best;
 }
 
 export async function decodeDeck(
   strategy: string,
   data: string
 ): Promise<Deck> {
-  const compressionStrategy = strategies[strategy];
+  const compressionStrategy =
+    strategies[strategy];
 
   if (!compressionStrategy) {
     throw new Error(
@@ -67,4 +76,19 @@ export async function decodeDeck(
   }
 
   return compressionStrategy.decode(data);
+}
+
+export function getCompressionInfo(
+  result: CompressionResult
+) {
+  const url = getUrl(result);
+
+  return {
+    strategy: result.strategy,
+    url,
+    length: url.length,
+    exceedsRecommendedLength:
+      url.length >
+      MAX_RECOMMENDED_URL_LENGTH,
+  };
 }
