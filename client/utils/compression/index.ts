@@ -1,56 +1,70 @@
 import type { Deck } from "../../../shared/deck";
-import type { CompressionStrategy } from "./types";
+import type {
+  CompressionResult,
+  CompressionStrategy,
+} from "./types";
+import { singleCompression } from "./single";
 
-class CompressionManager {
-  private readonly strategies = new Map<string, CompressionStrategy>();
+export const MAX_RECOMMENDED_URL_LENGTH = 8_000;
 
-  register(strategy: CompressionStrategy): void {
-    if (this.strategies.has(strategy.id)) {
-      throw new Error(
-        `Compression strategy "${strategy.id}" is already registered.`
-      );
-    }
+const strategies: Record<
+  string,
+  CompressionStrategy
+> = {
+  single: singleCompression,
+};
 
-    this.strategies.set(strategy.id, strategy);
-  }
+function getStudyUrl(
+  result: CompressionResult
+): string {
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "";
 
-  get(id: string): CompressionStrategy {
-    const strategy = this.strategies.get(id);
-
-    if (!strategy) {
-      throw new Error(`Unknown compression strategy "${id}".`);
-    }
-
-    return strategy;
-  }
-
-  async encode(
-    deck: Deck,
-    preferred = "single"
-  ): Promise<{
-    strategy: string;
-    data: string;
-  }> {
-    const strategy = this.get(preferred);
-
-    if (!strategy.canEncode(deck)) {
-      throw new Error(
-        `Compression strategy "${preferred}" cannot encode this deck.`
-      );
-    }
-
-    return {
-      strategy: strategy.id,
-      data: await strategy.encode(deck),
-    };
-  }
-
-  async decode(
-    strategyId: string,
-    data: string
-  ): Promise<Deck> {
-    return this.get(strategyId).decode(data);
-  }
+  return `${origin}/study/${result.strategy}/${result.data}`;
 }
 
-export const Compression = new CompressionManager();
+export async function encodeDeck(
+  deck: Deck
+): Promise<CompressionResult> {
+  const single = await singleCompression.encode(deck);
+
+  const singleUrl = getStudyUrl(single);
+
+  if (
+    singleUrl.length <=
+    MAX_RECOMMENDED_URL_LENGTH
+  ) {
+    return single;
+  }
+
+  /*
+   * Chain compression will be added here.
+   *
+   * The important architectural decision is that callers
+   * never need to know whether a deck is using single or
+   * chained compression.
+   *
+   * When chainCompression is implemented:
+   *
+   * return chainCompression.encode(deck);
+   */
+
+  return single;
+}
+
+export async function decodeDeck(
+  strategy: string,
+  data: string
+): Promise<Deck> {
+  const compressionStrategy = strategies[strategy];
+
+  if (!compressionStrategy) {
+    throw new Error(
+      `Unsupported compression strategy: ${strategy}`
+    );
+  }
+
+  return compressionStrategy.decode(data);
+}
