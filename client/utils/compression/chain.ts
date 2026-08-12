@@ -1,4 +1,7 @@
-import type { Deck } from "../../../shared/deck";
+import type { Deck } from "../../../shared/deck.js";
+import {
+  isValidDeck,
+} from "../../../shared/validation.js";
 
 import type {
   CompressionResult,
@@ -13,7 +16,9 @@ const decoder = new TextDecoder();
 function uint8ArrayToArrayBuffer(
   bytes: Uint8Array
 ): ArrayBuffer {
-  const buffer = new ArrayBuffer(bytes.byteLength);
+  const buffer = new ArrayBuffer(
+    bytes.byteLength
+  );
 
   new Uint8Array(buffer).set(bytes);
 
@@ -56,13 +61,23 @@ function base64UrlToBytes(
   const padding =
     normalized.length % 4 === 0
       ? ""
-      : "=".repeat(4 - (normalized.length % 4));
+      : "=".repeat(
+          4 - (normalized.length % 4)
+        );
 
-  const binary = atob(normalized + padding);
+  const binary = atob(
+    normalized + padding
+  );
 
-  const bytes = new Uint8Array(binary.length);
+  const bytes = new Uint8Array(
+    binary.length
+  );
 
-  for (let i = 0; i < binary.length; i += 1) {
+  for (
+    let i = 0;
+    i < binary.length;
+    i += 1
+  ) {
     bytes[i] = binary.charCodeAt(i);
   }
 
@@ -169,9 +184,17 @@ function serializeDeck(
 function deserializeDeck(
   bytes: Uint8Array
 ): Deck {
-  return JSON.parse(
+  const value: unknown = JSON.parse(
     decoder.decode(bytes)
-  ) as Deck;
+  );
+
+  if (!isValidDeck(value)) {
+    throw new Error(
+      "Invalid deck data."
+    );
+  }
+
+  return value;
 }
 
 async function createCandidate(
