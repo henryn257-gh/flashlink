@@ -51,14 +51,16 @@ function Study() {
 
     async function loadDeck() {
       if (!strategy || !data) {
-        if (!cancelled) {
-          setStatus("error");
-          setError(
-            "This study link is missing deck data."
-          );
-        }
+if (!isCompressionStrategy(strategy)) {
+  if (!cancelled) {
+    setStatus("error");
+    setError(
+      "This study link uses an unsupported compression strategy."
+    );
+  }
 
-        return;
+  return;
+}
       }
 
       setStatus("loading");
