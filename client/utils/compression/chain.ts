@@ -3,6 +3,7 @@ import type {
   CompressionResult,
   CompressionStrategy,
 } from "./types";
+import { assertCompressionSupport } from "./setup";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -38,7 +39,6 @@ function base64UrlToBytes(value: string): Uint8Array {
       : "=".repeat(4 - (normalized.length % 4));
 
   const binary = atob(normalized + padding);
-
   const bytes = new Uint8Array(binary.length);
 
   for (let i = 0; i < binary.length; i += 1) {
@@ -52,12 +52,6 @@ async function compress(
   data: Uint8Array,
   format: CompressionFormat
 ): Promise<Uint8Array> {
-  if (!("CompressionStream" in window)) {
-    throw new Error(
-      "This browser does not support compression."
-    );
-  }
-
   const stream = new Blob([data])
     .stream()
     .pipeThrough(new CompressionStream(format));
@@ -71,12 +65,6 @@ async function decompress(
   data: Uint8Array,
   format: CompressionFormat
 ): Promise<Uint8Array> {
-  if (!("DecompressionStream" in window)) {
-    throw new Error(
-      "This browser does not support decompression."
-    );
-  }
-
   const stream = new Blob([data])
     .stream()
     .pipeThrough(new DecompressionStream(format));
@@ -101,23 +89,20 @@ function serializeEnvelope(
 function deserializeEnvelope(
   bytes: Uint8Array
 ): ChainEnvelope {
-  const value = JSON.parse(
+  const value: unknown = JSON.parse(
     decoder.decode(bytes)
-  ) as unknown;
+  );
 
   if (
     typeof value !== "object" ||
-    value === null ||
-    !("version" in value) ||
-    !("format" in value) ||
-    !("payload" in value)
+    value === null
   ) {
     throw new Error(
       "Invalid chained compression data."
     );
   }
 
-  const envelope = value as ChainEnvelope;
+  const envelope = value as Record<string, unknown>;
 
   if (
     envelope.version !== 1 ||
@@ -130,7 +115,11 @@ function deserializeEnvelope(
     );
   }
 
-  return envelope;
+  return {
+    version: 1,
+    format: envelope.format,
+    payload: envelope.payload,
+  };
 }
 
 function serializeDeck(deck: Deck): Uint8Array {
@@ -146,16 +135,21 @@ function deserializeDeck(
 }
 
 /**
- * Chained compression deliberately tries multiple
- * stateless representations and keeps the smaller one.
+ * Chained compression is self-contained.
  *
- * It does NOT reference another user's URL or server
- * storage, so every generated link remains self-contained.
+ * It does not depend on a database, server storage,
+ * or another URL being available.
+ *
+ * The strategy can later be extended with additional
+ * stateless compression stages without changing the
+ * application-facing CompressionStrategy interface.
  */
 export const chainCompression: CompressionStrategy = {
   name: "chain",
 
   async encode(deck): Promise<CompressionResult> {
+    assertCompressionSupport();
+
     const original = serializeDeck(deck);
 
     const candidates = await Promise.all([
@@ -177,8 +171,9 @@ export const chainCompression: CompressionStrategy = {
   },
 
   async decode(data): Promise<Deck> {
-    const bytes = base64UrlToBytes(data);
+    assertCompressionSupport();
 
+    const bytes = base64UrlToBytes(data);
     const envelope = deserializeEnvelope(bytes);
 
     const compressed = base64UrlToBytes(
