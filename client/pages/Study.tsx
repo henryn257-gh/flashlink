@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import Card from "../components/common/Card";
 import Navbar from "../components/common/Navbar";
+import ProgressBar from "../components/common/ProgressBar";
 
 import type { Deck } from "../../shared/deck.js";
 import type { CompressionStrategyName } from "../utils/compression/types";
@@ -10,7 +11,6 @@ import type { CompressionStrategyName } from "../utils/compression/types";
 import { useStudy } from "../hooks/useStudy";
 
 import { decodeDeck } from "../utils/compression";
-import ProgressBar from "../components/common/ProgressBar";
 import { createStudyPath } from "../utils/url";
 
 type StudyStatus =
@@ -110,26 +110,26 @@ function Study() {
     };
   }, [strategy, data]);
 
-const handleEdit = () => {
-  if (
-    !strategy ||
-    !data ||
-    !isCompressionStrategy(strategy)
-  ) {
-    return;
-  }
+  const handleEdit = () => {
+    if (
+      !strategy ||
+      !data ||
+      !isCompressionStrategy(strategy)
+    ) {
+      return;
+    }
 
-  const studyPath = createStudyPath({
-    strategy,
-    data,
-  });
+    const studyPath = createStudyPath({
+      strategy,
+      data,
+    });
 
-  navigate(
-    `/create?edit=${encodeURIComponent(
-      studyPath
-    )}`
-  );
-};
+    navigate(
+      `/create?edit=${encodeURIComponent(
+        studyPath
+      )}`
+    );
+  };
 
   if (status === "loading") {
     return (
@@ -180,7 +180,9 @@ const handleEdit = () => {
 
               <button
                 type="button"
-                onClick={() => navigate("/create")}
+                onClick={() =>
+                  navigate("/create")
+                }
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
               >
                 Create Set
@@ -209,48 +211,28 @@ function StudyReady({
   deck,
   onEdit,
 }: StudyReadyProps) {
-const {
-  currentCard,
-  currentIndex,
-  totalCards,
-  progress,
-  isFirstCard,
-  isLastCard,
-  next,
-  previous,
-  restart,
-  shuffle,
-  toggleDifficult,
-  difficultCards,
-  isCurrentCardDifficult,
-  difficultOnly,
-  setDifficultOnly,
-} = useStudy(deck.cards);
-
-  const [difficultOnly, setDifficultOnly] =
-    useState(false);
+  const {
+    currentCard,
+    currentIndex,
+    totalCards,
+    progress,
+    isFirstCard,
+    isLastCard,
+    next,
+    previous,
+    restart,
+    shuffle,
+    toggleDifficult,
+    isCurrentCardDifficult,
+    difficultOnly,
+    setDifficultOnly,
+  } = useStudy(deck.cards);
 
   const handleDifficultOnly = () => {
-    setDifficultOnly((enabled) => {
-      const nextValue = !enabled;
-
-      /*
-       * The hook owns the actual study filter.
-       * This state only controls the button UI.
-       */
-      return nextValue;
-    });
+    setDifficultOnly(
+      !difficultOnly
+    );
   };
-
-  /*
-   * Keep the study hook's difficult filter synchronized
-   * with the local UI state.
-   */
-  useEffect(() => {
-    // The current useStudy API exposes
-    // setDifficultOnly. This effect is intentionally
-    // replaced below once we destructure it.
-  }, []);
 
   if (totalCards === 0) {
     return (
@@ -261,7 +243,8 @@ const {
           <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                {deck.title || "Untitled Set"}
+                {deck.title ||
+                  "Untitled Set"}
               </h1>
 
               {deck.description && (
@@ -286,7 +269,8 @@ const {
             </h2>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              Edit the set to add some flashcards.
+              Edit the set to add some
+              flashcards.
             </p>
           </div>
         </main>
@@ -303,7 +287,8 @@ const {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                {deck.title || "Untitled Set"}
+                {deck.title ||
+                  "Untitled Set"}
               </h1>
 
               {deck.description && (
@@ -324,14 +309,14 @@ const {
         </header>
 
         <section>
-          {/* Progress */}
           <ProgressBar
-  value={progress}
-  label={`Card ${currentIndex + 1} of ${totalCards}`}
-  className="mb-6"
-/>
+            value={progress}
+            label={`Card ${
+              currentIndex + 1
+            } of ${totalCards}`}
+            className="mb-6"
+          />
 
-          {/* Card */}
           {currentCard && (
             <Card
               term={currentCard.term}
@@ -341,7 +326,6 @@ const {
             />
           )}
 
-          {/* Card controls */}
           <div className="mt-6 flex items-center justify-center gap-3">
             <button
               type="button"
@@ -362,7 +346,6 @@ const {
             </button>
           </div>
 
-          {/* Study controls */}
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button
               type="button"
@@ -403,7 +386,9 @@ const {
                   : "border-border hover:bg-muted"
               }`}
             >
-              Difficult Only
+              {difficultOnly
+                ? "Showing Difficult"
+                : "Difficult Only"}
             </button>
           </div>
         </section>
