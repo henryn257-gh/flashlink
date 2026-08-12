@@ -7,6 +7,7 @@ import {
 
 import Create from "./pages/Create";
 import Home from "./pages/Home";
+import Study from "./pages/Study";
 
 function RoutePlaceholder({
   name,
@@ -34,21 +35,28 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route path="/create" element={<Create />} />
+        <Route
+          path="/create"
+          element={<Create />}
+        />
 
         <Route
           path="/study/:strategy/:data"
-          element={<RoutePlaceholder name="Study" />}
+          element={<Study />}
         />
 
         <Route
           path="/test"
-          element={<RoutePlaceholder name="Test" />}
+          element={
+            <RoutePlaceholder name="Test" />
+          }
         />
 
         <Route
           path="/review"
-          element={<RoutePlaceholder name="Review" />}
+          element={
+            <RoutePlaceholder name="Review" />
+          }
         />
 
         <Route
