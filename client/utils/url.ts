@@ -1,54 +1,73 @@
-import type { Deck } from "../../shared/deck";
-import { Compression } from "./compression";
+import type { CompressionResult } from "./compression/types";
 
-const STUDY_ROUTE = "/study";
-
-export interface EncodedDeck {
+export interface StudyRoute {
   strategy: string;
   data: string;
 }
 
-export function createStudyPath(encoded: EncodedDeck): string {
-  return `${STUDY_ROUTE}/${encoded.strategy}/${encoded.data}`;
+const STUDY_PREFIX = "/study";
+
+export function createStudyPath(
+  result: CompressionResult
+): string {
+  return `${STUDY_PREFIX}/${encodeURIComponent(
+    result.strategy
+  )}/${encodeURIComponent(result.data)}`;
 }
 
 export function createStudyUrl(
-  deck: Deck,
-  origin = window.location.origin
-): Promise<string> {
-  return Compression.encode(deck).then((encoded) => {
-    const path = createStudyPath(encoded);
-
-    return new URL(path, origin).toString();
-  });
-}
-
-export function parseStudyPath(pathname: string): EncodedDeck {
-  const parts = pathname.split("/").filter(Boolean);
-
-  if (parts.length !== 3 || parts[0] !== "study") {
-    throw new Error("Invalid FlashLink study URL.");
+  result: CompressionResult
+): string {
+  if (typeof window === "undefined") {
+    return createStudyPath(result);
   }
 
-  const [, strategy, data] = parts;
-
-  if (!strategy || !data) {
-    throw new Error("Invalid FlashLink study URL.");
-  }
-
-  return {
-    strategy,
-    data,
-  };
+  return new URL(
+    createStudyPath(result),
+    window.location.origin
+  ).toString();
 }
 
-export async function decodeStudyPath(
+export function parseStudyPath(
   pathname: string
-): Promise<Deck> {
-  const encoded = parseStudyPath(pathname);
+): StudyRoute | null {
+  const parts = pathname
+    .split("/")
+    .filter(Boolean);
 
-  return Compression.decode(
-    encoded.strategy,
-    encoded.data
-  );
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const [prefix, encodedStrategy, encodedData] =
+    parts;
+
+  if (prefix !== "study") {
+    return null;
+  }
+
+  try {
+    const strategy = decodeURIComponent(
+      encodedStrategy
+    );
+
+    const data = decodeURIComponent(encodedData);
+
+    if (!strategy || !data) {
+      return null;
+    }
+
+    return {
+      strategy,
+      data,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function isStudyPath(
+  pathname: string
+): boolean {
+  return parseStudyPath(pathname) !== null;
 }
