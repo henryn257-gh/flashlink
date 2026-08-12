@@ -42,9 +42,7 @@ interface UseStudyReturn {
   setDifficultOnly: (enabled: boolean) => void;
 }
 
-function shuffleCards<T>(
-  items: T[]
-): T[] {
+function shuffleCards<T>(items: T[]): T[] {
   const result = [...items];
 
   for (
@@ -56,10 +54,7 @@ function shuffleCards<T>(
       Math.random() * (index + 1)
     );
 
-    [
-      result[index],
-      result[randomIndex],
-    ] = [
+    [result[index], result[randomIndex]] = [
       result[randomIndex],
       result[index],
     ];
@@ -99,10 +94,8 @@ export function useStudy(
         : cards;
     });
 
-  const [
-    currentIndex,
-    setCurrentIndex,
-  ] = useState(0);
+  const [currentIndex, setCurrentIndex] =
+    useState(0);
 
   const [isComplete, setIsComplete] =
     useState(false);
@@ -196,13 +189,6 @@ export function useStudy(
         return index + 1;
       }
 
-      /*
-       * We only enter the completion state
-       * after the user has actually viewed
-       * the final card.
-       */
-      setIsComplete(true);
-
       return index;
     });
   }, [
@@ -233,6 +219,7 @@ export function useStudy(
     setCurrentIndex(
       totalCards - 1
     );
+
     setIsComplete(true);
   }, [totalCards]);
 
