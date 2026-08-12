@@ -1,11 +1,20 @@
-import { DECK_VERSION, Deck, Card } from "./deck";
+import type {
+  Card,
+  Deck,
+} from "./deck.js";
 
-function isCard(value: unknown): value is Card {
-  if (typeof value !== "object" || value === null) {
+export function isValidCard(
+  value: unknown
+): value is Card {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
     return false;
   }
 
-  const card = value as Card;
+  const card =
+    value as Record<string, unknown>;
 
   return (
     typeof card.term === "string" &&
@@ -13,26 +22,27 @@ function isCard(value: unknown): value is Card {
   );
 }
 
-export function isDeck(value: unknown): value is Deck {
-  if (typeof value !== "object" || value === null) {
+export function isValidDeck(
+  value: unknown
+): value is Deck {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
     return false;
   }
 
-  const deck = value as Deck;
+  const deck =
+    value as Record<string, unknown>;
 
-  return (
-    deck.version === DECK_VERSION &&
-    typeof deck.title === "string" &&
-    typeof deck.description === "string" &&
-    Array.isArray(deck.cards) &&
-    deck.cards.every(isCard)
-  );
-}
-
-export function validateDeck(value: unknown): Deck {
-  if (!isDeck(value)) {
-    throw new Error("Invalid FlashLink deck.");
+  if (
+    typeof deck.version !== "number" ||
+    typeof deck.title !== "string" ||
+    typeof deck.description !== "string" ||
+    !Array.isArray(deck.cards)
+  ) {
+    return false;
   }
 
-  return value;
+  return deck.cards.every(isValidCard);
 }
