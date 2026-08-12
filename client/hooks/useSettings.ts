@@ -13,7 +13,7 @@ export interface StudySettings {
   darkMode: boolean;
 }
 
-const DEFAULT_SETTINGS: StudySettings = {
+export const DEFAULT_SETTINGS: StudySettings = {
   shuffle: false,
   termsFirst: true,
   animation: true,
@@ -54,29 +54,32 @@ function loadSettings(): StudySettings {
       parsed as Partial<StudySettings>;
 
     return {
-      ...DEFAULT_SETTINGS,
-      ...value,
       shuffle:
         typeof value.shuffle === "boolean"
           ? value.shuffle
           : DEFAULT_SETTINGS.shuffle,
+
       termsFirst:
         typeof value.termsFirst === "boolean"
           ? value.termsFirst
           : DEFAULT_SETTINGS.termsFirst,
+
       animation:
         typeof value.animation === "boolean"
           ? value.animation
           : DEFAULT_SETTINGS.animation,
+
       timer:
         typeof value.timer === "boolean"
           ? value.timer
           : DEFAULT_SETTINGS.timer,
+
       difficultOnly:
         typeof value.difficultOnly ===
         "boolean"
           ? value.difficultOnly
           : DEFAULT_SETTINGS.difficultOnly,
+
       darkMode:
         typeof value.darkMode === "boolean"
           ? value.darkMode
@@ -100,14 +103,8 @@ function saveSettings(
       JSON.stringify(settings)
     );
   } catch {
-    /*
-     * localStorage can be unavailable in
-     * private/restricted browser contexts.
-     *
-     * Settings still work for the current
-     * session because React state remains
-     * active.
-     */
+    // Settings still work for the current
+    // session if localStorage is unavailable.
   }
 }
 
