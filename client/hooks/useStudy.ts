@@ -26,6 +26,7 @@ interface UseStudyReturn {
 
   isFirstCard: boolean;
   isLastCard: boolean;
+  isComplete: boolean;
 
   difficultCards: Set<number>;
   isCurrentCardDifficult: boolean;
@@ -34,6 +35,7 @@ interface UseStudyReturn {
   next: () => void;
   previous: () => void;
   restart: () => void;
+  finish: () => void;
   shuffle: () => void;
 
   toggleDifficult: () => void;
@@ -102,16 +104,9 @@ export function useStudy(
     setCurrentIndex,
   ] = useState(0);
 
-  /*
-   * Difficult cards are stored using their
-   * original deck index.
-   *
-   * This means the difficult state survives:
-   *
-   * - moving next/previous
-   * - shuffling
-   * - enabling/disabling difficult-only mode
-   */
+  const [isComplete, setIsComplete] =
+    useState(false);
+
   const [
     difficultCards,
     setDifficultCards,
@@ -126,10 +121,6 @@ export function useStudy(
     difficultOnlyInitially
   );
 
-  /*
-   * Filter the study sequence without
-   * destroying the original deck order.
-   */
   const visibleCards = useMemo(() => {
     if (!difficultOnly) {
       return studyCards;
@@ -147,10 +138,6 @@ export function useStudy(
     difficultCards,
   ]);
 
-  /*
-   * Prevent the current index from ever
-   * pointing outside the visible sequence.
-   */
   const safeIndex = Math.min(
     currentIndex,
     Math.max(
@@ -171,9 +158,11 @@ export function useStudy(
   const progress =
     totalCards === 0
       ? 0
-      : ((safeIndex + 1) /
-          totalCards) *
-        100;
+      : isComplete
+        ? 100
+        : ((safeIndex + 1) /
+            totalCards) *
+          100;
 
   const isFirstCard =
     totalCards === 0 ||
@@ -191,30 +180,61 @@ export function useStudy(
       : false;
 
   const next = useCallback(() => {
+    if (isComplete) {
+      return;
+    }
+
     setCurrentIndex((index) => {
       const lastIndex =
         visibleCards.length - 1;
 
-      if (lastIndex <= 0) {
+      if (lastIndex < 0) {
         return 0;
       }
 
-      return Math.min(
-        index + 1,
-        lastIndex
-      );
+      if (index < lastIndex) {
+        return index + 1;
+      }
+
+      /*
+       * We only enter the completion state
+       * after the user has actually viewed
+       * the final card.
+       */
+      setIsComplete(true);
+
+      return index;
     });
-  }, [visibleCards.length]);
+  }, [
+    isComplete,
+    visibleCards.length,
+  ]);
 
   const previous = useCallback(() => {
+    if (isComplete) {
+      setIsComplete(false);
+    }
+
     setCurrentIndex((index) =>
       Math.max(index - 1, 0)
     );
-  }, []);
+  }, [isComplete]);
 
   const restart = useCallback(() => {
     setCurrentIndex(0);
+    setIsComplete(false);
   }, []);
+
+  const finish = useCallback(() => {
+    if (totalCards === 0) {
+      return;
+    }
+
+    setCurrentIndex(
+      totalCards - 1
+    );
+    setIsComplete(true);
+  }, [totalCards]);
 
   const shuffle = useCallback(() => {
     setStudyCards((cards) =>
@@ -222,6 +242,7 @@ export function useStudy(
     );
 
     setCurrentIndex(0);
+    setIsComplete(false);
   }, []);
 
   const toggleDifficult = useCallback(() => {
@@ -249,6 +270,7 @@ export function useStudy(
     (enabled: boolean) => {
       setDifficultOnlyState(enabled);
       setCurrentIndex(0);
+      setIsComplete(false);
     },
     []
   );
@@ -266,6 +288,7 @@ export function useStudy(
 
     isFirstCard,
     isLastCard,
+    isComplete,
 
     difficultCards,
     isCurrentCardDifficult,
@@ -274,6 +297,7 @@ export function useStudy(
     next,
     previous,
     restart,
+    finish,
     shuffle,
 
     toggleDifficult,
