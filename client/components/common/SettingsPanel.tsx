@@ -12,7 +12,9 @@ interface SettingsPanelProps {
   onTermsFirstChange: (enabled: boolean) => void;
   onAnimationChange: (enabled: boolean) => void;
   onTimerChange: (enabled: boolean) => void;
-  onDifficultOnlyChange: (enabled: boolean) => void;
+  onDifficultOnlyChange: (
+    enabled: boolean
+  ) => void;
   onDarkModeChange: (enabled: boolean) => void;
 
   footer?: ReactNode;
@@ -32,7 +34,7 @@ function SettingToggle({
   onChange,
 }: SettingToggleProps) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition hover:bg-muted/50">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition hover:bg-muted/50">
       <div className="min-w-0">
         <p className="text-sm font-medium">
           {label}
@@ -47,6 +49,7 @@ function SettingToggle({
         type="button"
         role="switch"
         aria-checked={checked}
+        aria-label={label}
         onClick={() => onChange(!checked)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition ${
           checked
@@ -55,6 +58,7 @@ function SettingToggle({
         }`}
       >
         <span
+          aria-hidden="true"
           className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition ${
             checked
               ? "left-6"
@@ -62,7 +66,7 @@ function SettingToggle({
           }`}
         />
       </button>
-    </label>
+    </div>
   );
 }
 
