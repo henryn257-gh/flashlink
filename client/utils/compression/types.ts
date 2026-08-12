@@ -1,4 +1,4 @@
-import type { Deck } from "../../../shared/deck";
+import type { Deck } from "../../../shared/deck.js";
 
 export type CompressionStrategyName =
   | "single"
@@ -12,7 +12,11 @@ export interface CompressionResult {
 export interface CompressionStrategy {
   name: CompressionStrategyName;
 
-  encode(deck: Deck): Promise<CompressionResult>;
+  encode(
+    deck: Deck
+  ): Promise<CompressionResult>;
 
-  decode(data: string): Promise<Deck>;
+  decode(
+    data: string
+  ): Promise<Deck>;
 }
