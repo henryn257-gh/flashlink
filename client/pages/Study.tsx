@@ -205,20 +205,21 @@ function StudyReady({
   deck,
   onEdit,
 }: StudyReadyProps) {
-  const {
-    currentCard,
-    currentIndex,
-    totalCards,
-    progress,
-    isFirstCard,
-    isLastCard,
-    next,
-    previous,
-    restart,
-    shuffle,
-    toggleDifficult,
-    difficultCards,
-  } = useStudy(deck.cards);
+const {
+  currentCard,
+  currentIndex,
+  totalCards,
+  progress,
+  isFirstCard,
+  isLastCard,
+  next,
+  previous,
+  restart,
+  shuffle,
+  toggleDifficult,
+  difficultCards,
+  setDifficultOnly,
+} = useStudy(deck.cards);
 
   const [difficultOnly, setDifficultOnly] =
     useState(false);
