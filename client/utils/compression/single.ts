@@ -1,4 +1,7 @@
-import type { Deck } from "../../../shared/deck";
+import type { Deck } from "../../../shared/deck.js";
+import {
+  isValidDeck,
+} from "../../../shared/validation.js";
 
 import type {
   CompressionResult,
@@ -56,13 +59,23 @@ function base64UrlToBytes(
   const padding =
     normalized.length % 4 === 0
       ? ""
-      : "=".repeat(4 - (normalized.length % 4));
+      : "=".repeat(
+          4 - (normalized.length % 4)
+        );
 
-  const binary = atob(normalized + padding);
+  const binary = atob(
+    normalized + padding
+  );
 
-  const bytes = new Uint8Array(binary.length);
+  const bytes = new Uint8Array(
+    binary.length
+  );
 
-  for (let i = 0; i < binary.length; i += 1) {
+  for (
+    let i = 0;
+    i < binary.length;
+    i += 1
+  ) {
     bytes[i] = binary.charCodeAt(i);
   }
 
@@ -72,11 +85,14 @@ function base64UrlToBytes(
 async function compress(
   data: Uint8Array
 ): Promise<Uint8Array> {
-  const input = uint8ArrayToArrayBuffer(data);
+  const input =
+    uint8ArrayToArrayBuffer(data);
 
   const stream = new Blob([input])
     .stream()
-    .pipeThrough(new CompressionStream("gzip"));
+    .pipeThrough(
+      new CompressionStream("gzip")
+    );
 
   const buffer =
     await new Response(stream).arrayBuffer();
@@ -87,11 +103,14 @@ async function compress(
 async function decompress(
   data: Uint8Array
 ): Promise<Uint8Array> {
-  const input = uint8ArrayToArrayBuffer(data);
+  const input =
+    uint8ArrayToArrayBuffer(data);
 
   const stream = new Blob([input])
     .stream()
-    .pipeThrough(new DecompressionStream("gzip"));
+    .pipeThrough(
+      new DecompressionStream("gzip")
+    );
 
   const buffer =
     await new Response(stream).arrayBuffer();
@@ -110,9 +129,17 @@ function serializeDeck(
 function deserializeDeck(
   data: Uint8Array
 ): Deck {
-  return JSON.parse(
+  const value: unknown = JSON.parse(
     textDecoder.decode(data)
-  ) as Deck;
+  );
+
+  if (!isValidDeck(value)) {
+    throw new Error(
+      "Invalid deck data."
+    );
+  }
+
+  return value;
 }
 
 export const singleCompression: CompressionStrategy =
@@ -132,9 +159,8 @@ export const singleCompression: CompressionStrategy =
 
       return {
         strategy: "single",
-        data: bytesToBase64Url(
-          compressed
-        ),
+        data:
+          bytesToBase64Url(compressed),
       };
     },
 
