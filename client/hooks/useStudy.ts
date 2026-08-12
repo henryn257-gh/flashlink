@@ -11,7 +11,7 @@ interface UseStudyOptions {
   difficultOnly?: boolean;
 }
 
-interface StudyCard {
+interface StudyEntry {
   card: Card;
   originalIndex: number;
 }
@@ -19,59 +19,41 @@ interface StudyCard {
 interface UseStudyReturn {
   cards: Card[];
   currentCard: Card | null;
-
   currentIndex: number;
   totalCards: number;
   progress: number;
 
   isFirstCard: boolean;
   isLastCard: boolean;
-  isComplete: boolean;
+  isCurrentCardDifficult: boolean;
 
   difficultCards: Set<number>;
-  isCurrentCardDifficult: boolean;
   difficultOnly: boolean;
 
   next: () => void;
   previous: () => void;
   restart: () => void;
-  finish: () => void;
   shuffle: () => void;
-
   toggleDifficult: () => void;
+
   setDifficultOnly: (enabled: boolean) => void;
 }
 
 function shuffleCards<T>(items: T[]): T[] {
   const result = [...items];
 
-  for (
-    let index = result.length - 1;
-    index > 0;
-    index -= 1
-  ) {
-    const randomIndex = Math.floor(
-      Math.random() * (index + 1)
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(
+      Math.random() * (i + 1)
     );
 
-    [result[index], result[randomIndex]] = [
-      result[randomIndex],
-      result[index],
+    [result[i], result[j]] = [
+      result[j],
+      result[i],
     ];
   }
 
   return result;
-}
-
-function createStudyCards(
-  sourceCards: Card[]
-): StudyCard[] {
-  return sourceCards.map(
-    (card, originalIndex) => ({
-      card,
-      originalIndex,
-    })
-  );
 }
 
 export function useStudy(
@@ -80,165 +62,149 @@ export function useStudy(
 ): UseStudyReturn {
   const {
     shuffle: shuffleInitially = false,
-    difficultOnly:
-      difficultOnlyInitially = false,
+    difficultOnly: difficultOnlyInitially = false,
   } = options;
 
-  const [studyCards, setStudyCards] =
-    useState<StudyCard[]>(() => {
-      const cards =
-        createStudyCards(sourceCards);
+  /*
+   * Each card keeps its original deck index.
+   *
+   * This is important because difficult-card state
+   * should survive shuffling.
+   */
+  const initialEntries = useMemo<StudyEntry[]>(
+    () =>
+      sourceCards.map((card, originalIndex) => ({
+        card,
+        originalIndex,
+      })),
+    [sourceCards]
+  );
 
-      return shuffleInitially
-        ? shuffleCards(cards)
-        : cards;
-    });
+  const [studyEntries, setStudyEntries] =
+    useState<StudyEntry[]>(() =>
+      shuffleInitially
+        ? shuffleCards(initialEntries)
+        : [...initialEntries]
+    );
 
   const [currentIndex, setCurrentIndex] =
     useState(0);
 
-  const [isComplete, setIsComplete] =
-    useState(false);
+  /*
+   * Stores original deck indexes, not visible indexes.
+   *
+   * Example:
+   *
+   * Deck:
+   * 0 = Biology
+   * 1 = Chemistry
+   * 2 = Physics
+   *
+   * If shuffled to:
+   * Physics, Biology, Chemistry
+   *
+   * Physics is still identified as originalIndex 2.
+   */
+  const [difficultCards, setDifficultCards] =
+    useState<Set<number>>(
+      () => new Set<number>()
+    );
 
-  const [
-    difficultCards,
-    setDifficultCards,
-  ] = useState<Set<number>>(
-    () => new Set<number>()
-  );
+  const [difficultOnly, setDifficultOnlyState] =
+    useState(difficultOnlyInitially);
 
-  const [
-    difficultOnly,
-    setDifficultOnlyState,
-  ] = useState(
-    difficultOnlyInitially
-  );
-
-  const visibleCards = useMemo(() => {
+  /*
+   * Filter the current study order while preserving
+   * each card's original identity.
+   */
+  const visibleEntries = useMemo(() => {
     if (!difficultOnly) {
-      return studyCards;
+      return studyEntries;
     }
 
-    return studyCards.filter(
-      (studyCard) =>
-        difficultCards.has(
-          studyCard.originalIndex
-        )
+    return studyEntries.filter((entry) =>
+      difficultCards.has(entry.originalIndex)
     );
   }, [
-    studyCards,
+    studyEntries,
     difficultOnly,
     difficultCards,
   ]);
 
+  /*
+   * Keep the index safe if the visible card list
+   * becomes smaller after filtering.
+   */
   const safeIndex = Math.min(
     currentIndex,
-    Math.max(
-      visibleCards.length - 1,
-      0
-    )
+    Math.max(visibleEntries.length - 1, 0)
   );
 
-  const currentStudyCard =
-    visibleCards[safeIndex] ?? null;
+  const currentEntry =
+    visibleEntries[safeIndex] ?? null;
 
   const currentCard =
-    currentStudyCard?.card ?? null;
+    currentEntry?.card ?? null;
 
-  const totalCards =
-    visibleCards.length;
+  const totalCards = visibleEntries.length;
 
   const progress =
     totalCards === 0
       ? 0
-      : isComplete
-        ? 100
-        : ((safeIndex + 1) /
-            totalCards) *
-          100;
+      : ((safeIndex + 1) / totalCards) * 100;
 
   const isFirstCard =
-    totalCards === 0 ||
-    safeIndex === 0;
+    totalCards === 0 || safeIndex === 0;
 
   const isLastCard =
     totalCards === 0 ||
     safeIndex === totalCards - 1;
 
   const isCurrentCardDifficult =
-    currentStudyCard !== null
+    currentEntry !== null
       ? difficultCards.has(
-          currentStudyCard.originalIndex
+          currentEntry.originalIndex
         )
       : false;
 
   const next = useCallback(() => {
-    if (isComplete) {
-      return;
-    }
-
     setCurrentIndex((index) => {
       const lastIndex =
-        visibleCards.length - 1;
+        visibleEntries.length - 1;
 
-      if (lastIndex < 0) {
+      if (lastIndex <= 0) {
         return 0;
       }
 
-      if (index < lastIndex) {
-        return index + 1;
-      }
-
-      return index;
+      return Math.min(index + 1, lastIndex);
     });
-  }, [
-    isComplete,
-    visibleCards.length,
-  ]);
+  }, [visibleEntries.length]);
 
   const previous = useCallback(() => {
-    if (isComplete) {
-      setIsComplete(false);
-    }
-
     setCurrentIndex((index) =>
       Math.max(index - 1, 0)
     );
-  }, [isComplete]);
+  }, []);
 
   const restart = useCallback(() => {
     setCurrentIndex(0);
-    setIsComplete(false);
   }, []);
 
-  const finish = useCallback(() => {
-    if (totalCards === 0) {
-      return;
-    }
-
-    setCurrentIndex(
-      totalCards - 1
-    );
-
-    setIsComplete(true);
-  }, [totalCards]);
-
   const shuffle = useCallback(() => {
-    setStudyCards((cards) =>
-      shuffleCards(cards)
+    setStudyEntries((entries) =>
+      shuffleCards(entries)
     );
 
     setCurrentIndex(0);
-    setIsComplete(false);
   }, []);
 
   const toggleDifficult = useCallback(() => {
-    if (!currentStudyCard) {
+    if (!currentEntry) {
       return;
     }
 
     const originalIndex =
-      currentStudyCard.originalIndex;
+      currentEntry.originalIndex;
 
     setDifficultCards((previous) => {
       const next = new Set(previous);
@@ -251,43 +217,55 @@ export function useStudy(
 
       return next;
     });
-  }, [currentStudyCard]);
+  }, [currentEntry]);
 
   const setDifficultOnly = useCallback(
     (enabled: boolean) => {
       setDifficultOnlyState(enabled);
+
+      /*
+       * Always restart when changing the filter.
+       * Otherwise the current index could point past
+       * the new filtered list.
+       */
       setCurrentIndex(0);
-      setIsComplete(false);
     },
     []
   );
 
   return {
-    cards: visibleCards.map(
-      (studyCard) => studyCard.card
+    cards: visibleEntries.map(
+      (entry) => entry.card
     ),
 
     currentCard,
 
     currentIndex: safeIndex,
+
     totalCards,
+
     progress,
 
     isFirstCard,
+
     isLastCard,
-    isComplete,
+
+    isCurrentCardDifficult,
 
     difficultCards,
-    isCurrentCardDifficult,
+
     difficultOnly,
 
     next,
+
     previous,
+
     restart,
-    finish,
+
     shuffle,
 
     toggleDifficult,
+
     setDifficultOnly,
   };
 }
