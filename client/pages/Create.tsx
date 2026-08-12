@@ -43,6 +43,9 @@ function isCompressionStrategy(
 function Create() {
   const [searchParams] = useSearchParams();
 
+  const editValue = searchParams.get("edit");
+  const isEditMode = Boolean(editValue);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] =
     useState("");
@@ -69,6 +72,18 @@ function Create() {
   const [isLoadingEditDeck, setIsLoadingEditDeck] =
     useState(false);
 
+  /*
+   * Any change to the deck invalidates the previously
+   * generated share URL.
+   *
+   * Share links are immutable snapshots of the deck.
+   */
+  const invalidateGeneratedLink = () => {
+    setShareUrl(null);
+    setCopied(false);
+    setUrlLength(null);
+  };
+
   const deck = useMemo<Deck>(
     () => ({
       version: 1,
@@ -86,16 +101,16 @@ function Create() {
    *
    * /create?edit=/study/single/ABC123
    *
-   * The study URL itself contains everything needed
-   * to reconstruct the deck.
+   * or:
    *
-   * No database is involved.
+   * /create?edit=/study/chain/ABC123
+   *
+   * The compressed study URL contains the entire deck,
+   * so editing does not require a database.
    */
   useEffect(() => {
-    const editValue =
-      searchParams.get("edit");
-
     if (!editValue) {
+      setIsLoadingEditDeck(false);
       return;
     }
 
@@ -106,16 +121,14 @@ function Create() {
       setGenerationError(null);
 
       try {
-        const editUrl =
-          new URL(
-            editValue,
-            window.location.origin
-          );
+        const editUrl = new URL(
+          editValue,
+          window.location.origin
+        );
 
-        const parts =
-          editUrl.pathname
-            .split("/")
-            .filter(Boolean);
+        const parts = editUrl.pathname
+          .split("/")
+          .filter(Boolean);
 
         /*
          * Expected:
@@ -134,9 +147,7 @@ function Create() {
         const strategy = parts[1];
         const data = parts[2];
 
-        if (
-          !isCompressionStrategy(strategy)
-        ) {
+        if (!isCompressionStrategy(strategy)) {
           throw new Error(
             "The edit link uses an unsupported compression strategy."
           );
@@ -158,10 +169,12 @@ function Create() {
           return;
         }
 
-        setTitle(existingDeck.title);
+        setTitle(existingDeck.title ?? "");
+
         setDescription(
-          existingDeck.description
+          existingDeck.description ?? ""
         );
+
         setCards(
           existingDeck.cards.length > 0
             ? existingDeck.cards.map(
@@ -174,9 +187,7 @@ function Create() {
             : [createCard()]
         );
 
-        setShareUrl(null);
-        setCopied(false);
-        setUrlLength(null);
+        invalidateGeneratedLink();
       } catch (error) {
         console.error(error);
 
@@ -201,7 +212,7 @@ function Create() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams]);
+  }, [editValue]);
 
   const updateCard = (
     index: number,
@@ -220,8 +231,7 @@ function Create() {
       )
     );
 
-    setShareUrl(null);
-    setCopied(false);
+    invalidateGeneratedLink();
   };
 
   const addCard = () => {
@@ -230,8 +240,7 @@ function Create() {
       createCard(),
     ]);
 
-    setShareUrl(null);
-    setCopied(false);
+    invalidateGeneratedLink();
   };
 
   const deleteCard = (index: number) => {
@@ -246,8 +255,7 @@ function Create() {
       );
     });
 
-    setShareUrl(null);
-    setCopied(false);
+    invalidateGeneratedLink();
   };
 
   const duplicateCard = (index: number) => {
@@ -270,8 +278,7 @@ function Create() {
       ];
     });
 
-    setShareUrl(null);
-    setCopied(false);
+    invalidateGeneratedLink();
   };
 
   const moveCard = (
@@ -305,8 +312,7 @@ function Create() {
       return nextCards;
     });
 
-    setShareUrl(null);
-    setCopied(false);
+    invalidateGeneratedLink();
   };
 
   const generateLink = async () => {
@@ -315,6 +321,10 @@ function Create() {
     setCopied(false);
 
     try {
+      /*
+       * encodeDeck automatically chooses the best
+       * available compression strategy.
+       */
       const result =
         await encodeDeck(deck);
 
@@ -368,17 +378,13 @@ function Create() {
       return;
     }
 
-    window.location.href =
-      shareUrl;
+    window.location.href = shareUrl;
   };
 
   const hasLongUrl =
     urlLength !== null &&
     urlLength >
       MAX_RECOMMENDED_URL_LENGTH;
-
-  const isEditMode =
-    Boolean(searchParams.get("edit"));
 
   if (
     isEditMode &&
@@ -453,8 +459,7 @@ function Create() {
                       setTitle(
                         event.target.value
                       );
-                      setShareUrl(null);
-                      setCopied(false);
+                      invalidateGeneratedLink();
                     }}
                     placeholder="Biology Chapter 1"
                     className="w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -476,8 +481,7 @@ function Create() {
                       setDescription(
                         event.target.value
                       );
-                      setShareUrl(null);
-                      setCopied(false);
+                      invalidateGeneratedLink();
                     }}
                     placeholder="A quick review set for..."
                     rows={3}
@@ -525,8 +529,7 @@ function Create() {
                           }
                           disabled={
                             index ===
-                            cards.length -
-                              1
+                            cards.length - 1
                           }
                         >
                           ↓
@@ -657,8 +660,7 @@ function Create() {
                   cards[0]?.term ?? ""
                 }
                 definition={
-                  cards[0]?.definition ??
-                  ""
+                  cards[0]?.definition ?? ""
                 }
               />
             </div>
@@ -666,7 +668,9 @@ function Create() {
             {shareUrl && (
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
                 <h2 className="text-lg font-semibold">
-                  Your Share Link
+                  {isEditMode
+                    ? "Updated Share Link"
+                    : "Your Share Link"}
                 </h2>
 
                 <p className="mt-1 text-sm text-muted-foreground">
