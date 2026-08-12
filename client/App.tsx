@@ -5,6 +5,7 @@ import {
   Routes,
 } from "react-router-dom";
 
+import Create from "./pages/Create";
 import Home from "./pages/Home";
 
 function RoutePlaceholder({
@@ -33,10 +34,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
 
-        <Route
-          path="/create"
-          element={<RoutePlaceholder name="Create" />}
-        />
+        <Route path="/create" element={<Create />} />
 
         <Route
           path="/study/:strategy/:data"
