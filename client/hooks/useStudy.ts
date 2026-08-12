@@ -12,16 +12,18 @@ interface UseStudyOptions {
 }
 
 interface StudyCard {
-  id: number;
   card: Card;
+  originalIndex: number;
 }
 
 interface UseStudyReturn {
   cards: Card[];
   currentCard: Card | null;
+
   currentIndex: number;
   totalCards: number;
   progress: number;
+
   isFirstCard: boolean;
   isLastCard: boolean;
 
@@ -33,26 +35,46 @@ interface UseStudyReturn {
   previous: () => void;
   restart: () => void;
   shuffle: () => void;
-  toggleDifficult: () => void;
 
+  toggleDifficult: () => void;
   setDifficultOnly: (enabled: boolean) => void;
 }
 
-function shuffleCards<T>(items: T[]): T[] {
+function shuffleCards<T>(
+  items: T[]
+): T[] {
   const result = [...items];
 
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(
-      Math.random() * (i + 1)
+  for (
+    let index = result.length - 1;
+    index > 0;
+    index -= 1
+  ) {
+    const randomIndex = Math.floor(
+      Math.random() * (index + 1)
     );
 
-    [result[i], result[j]] = [
-      result[j],
-      result[i],
+    [
+      result[index],
+      result[randomIndex],
+    ] = [
+      result[randomIndex],
+      result[index],
     ];
   }
 
   return result;
+}
+
+function createStudyCards(
+  sourceCards: Card[]
+): StudyCard[] {
+  return sourceCards.map(
+    (card, originalIndex) => ({
+      card,
+      originalIndex,
+    })
+  );
 }
 
 export function useStudy(
@@ -61,39 +83,41 @@ export function useStudy(
 ): UseStudyReturn {
   const {
     shuffle: shuffleInitially = false,
-    difficultOnly: difficultOnlyInitially = false,
+    difficultOnly:
+      difficultOnlyInitially = false,
   } = options;
 
-  /*
-   * Cards get an internal study-session ID.
-   *
-   * This ID is NOT part of the Deck/Card model.
-   * It never gets encoded into the URL.
-   *
-   * It exists only so study preferences stay attached
-   * to the correct card when cards are shuffled.
-   */
   const [studyCards, setStudyCards] =
     useState<StudyCard[]>(() => {
-      const cards = sourceCards.map(
-        (card, index) => ({
-          id: index,
-          card,
-        })
-      );
+      const cards =
+        createStudyCards(sourceCards);
 
       return shuffleInitially
         ? shuffleCards(cards)
         : cards;
     });
 
-  const [currentIndex, setCurrentIndex] =
-    useState(0);
+  const [
+    currentIndex,
+    setCurrentIndex,
+  ] = useState(0);
 
-  const [difficultCardIds, setDifficultCardIds] =
-    useState<Set<number>>(
-      () => new Set<number>()
-    );
+  /*
+   * Difficult cards are stored using their
+   * original deck index.
+   *
+   * This means the difficult state survives:
+   *
+   * - moving next/previous
+   * - shuffling
+   * - enabling/disabling difficult-only mode
+   */
+  const [
+    difficultCards,
+    setDifficultCards,
+  ] = useState<Set<number>>(
+    () => new Set<number>()
+  );
 
   const [
     difficultOnly,
@@ -103,10 +127,8 @@ export function useStudy(
   );
 
   /*
-   * Filter the study-session cards.
-   *
-   * Because the difficult state is attached to the
-   * internal card ID, shuffling cannot break it.
+   * Filter the study sequence without
+   * destroying the original deck order.
    */
   const visibleCards = useMemo(() => {
     if (!difficultOnly) {
@@ -114,18 +136,20 @@ export function useStudy(
     }
 
     return studyCards.filter(
-      ({ id }) =>
-        difficultCardIds.has(id)
+      (studyCard) =>
+        difficultCards.has(
+          studyCard.originalIndex
+        )
     );
   }, [
     studyCards,
     difficultOnly,
-    difficultCardIds,
+    difficultCards,
   ]);
 
   /*
-   * If filtering reduces the number of cards,
-   * make sure the current position remains valid.
+   * Prevent the current index from ever
+   * pointing outside the visible sequence.
    */
   const safeIndex = Math.min(
     currentIndex,
@@ -160,22 +184,11 @@ export function useStudy(
     safeIndex === totalCards - 1;
 
   const isCurrentCardDifficult =
-    currentStudyCard !== null &&
-    difficultCardIds.has(
-      currentStudyCard.id
-    );
-
-  /*
-   * Expose difficult IDs as a Set<number>.
-   *
-   * This is still session-only state.
-   * Nothing is added to the actual Card model.
-   */
-  const difficultCards = useMemo(
-    () =>
-      new Set(difficultCardIds),
-    [difficultCardIds]
-  );
+    currentStudyCard !== null
+      ? difficultCards.has(
+          currentStudyCard.originalIndex
+        )
+      : false;
 
   const next = useCallback(() => {
     setCurrentIndex((index) => {
@@ -216,19 +229,16 @@ export function useStudy(
       return;
     }
 
-    setDifficultCardIds((previous) => {
+    const originalIndex =
+      currentStudyCard.originalIndex;
+
+    setDifficultCards((previous) => {
       const next = new Set(previous);
 
-      if (
-        next.has(currentStudyCard.id)
-      ) {
-        next.delete(
-          currentStudyCard.id
-        );
+      if (next.has(originalIndex)) {
+        next.delete(originalIndex);
       } else {
-        next.add(
-          currentStudyCard.id
-        );
+        next.add(originalIndex);
       }
 
       return next;
@@ -238,11 +248,6 @@ export function useStudy(
   const setDifficultOnly = useCallback(
     (enabled: boolean) => {
       setDifficultOnlyState(enabled);
-
-      /*
-       * Always begin the filtered session
-       * at its first card.
-       */
       setCurrentIndex(0);
     },
     []
@@ -250,33 +255,28 @@ export function useStudy(
 
   return {
     cards: visibleCards.map(
-      ({ card }) => card
+      (studyCard) => studyCard.card
     ),
 
     currentCard,
 
     currentIndex: safeIndex,
-
     totalCards,
-
     progress,
 
     isFirstCard,
-
     isLastCard,
 
     difficultCards,
-
     isCurrentCardDifficult,
-
     difficultOnly,
 
     next,
     previous,
     restart,
     shuffle,
-    toggleDifficult,
 
+    toggleDifficult,
     setDifficultOnly,
   };
 }
