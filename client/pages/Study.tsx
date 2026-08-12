@@ -110,23 +110,26 @@ function Study() {
     };
   }, [strategy, data]);
 
-  const handleEdit = () => {
-    if (
-      !deck ||
-      !strategy ||
-      !data ||
-      !isCompressionStrategy(strategy)
-    ) {
-      return;
-    }
+const handleEdit = () => {
+  if (
+    !strategy ||
+    !data ||
+    !isCompressionStrategy(strategy)
+  ) {
+    return;
+  }
 
-    navigate(
-      createStudyPath({
-        strategy,
-        data,
-      })
-    );
-  };
+  const studyPath = createStudyPath({
+    strategy,
+    data,
+  });
+
+  navigate(
+    `/create?edit=${encodeURIComponent(
+      studyPath
+    )}`
+  );
+};
 
   if (status === "loading") {
     return (
