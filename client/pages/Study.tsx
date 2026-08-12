@@ -11,7 +11,6 @@ import type { CompressionStrategyName } from "../utils/compression/types";
 import { useStudy } from "../hooks/useStudy";
 
 import { decodeDeck } from "../utils/compression";
-import { createStudyPath } from "../utils/url";
 
 type StudyStatus =
   | "loading"
