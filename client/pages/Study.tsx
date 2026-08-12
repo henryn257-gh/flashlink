@@ -98,27 +98,23 @@ function Study() {
     };
   }, [strategy, data]);
 
-  const handleEdit = () => {
-    if (!deck || !strategy || !data) {
-      return;
-    }
+const handleEdit = () => {
+  if (
+    !deck ||
+    !strategy ||
+    !data ||
+    !isCompressionStrategy(strategy)
+  ) {
+    return;
+  }
 
-    /*
-     * The deck is already decoded locally.
-     *
-     * The Creator will eventually accept this deck
-     * directly so editing never requires a database.
-     *
-     * For now this preserves the current study URL.
-     */
-    navigate(
-      createStudyPath({
-        strategy,
-        data,
-      })
-    );
-  };
-
+  navigate(
+    createStudyPath({
+      strategy,
+      data,
+    })
+  );
+};
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-background">
