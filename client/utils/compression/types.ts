@@ -1,26 +1,18 @@
 import type { Deck } from "../../../shared/deck";
 
+export type CompressionStrategyName =
+  | "single"
+  | "chain";
+
+export interface CompressionResult {
+  strategy: CompressionStrategyName;
+  data: string;
+}
+
 export interface CompressionStrategy {
-  /**
-   * Unique strategy identifier.
-   * Example:
-   * "single"
-   * "chain"
-   */
-  readonly id: string;
+  name: CompressionStrategyName;
 
-  /**
-   * Returns true if this strategy can encode the deck.
-   */
-  canEncode(deck: Deck): boolean;
+  encode(deck: Deck): Promise<CompressionResult>;
 
-  /**
-   * Encodes the deck into a URL-safe string.
-   */
-  encode(deck: Deck): Promise<string>;
-
-  /**
-   * Decodes a URL-safe string back into a deck.
-   */
   decode(data: string): Promise<Deck>;
 }
