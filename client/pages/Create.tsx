@@ -109,11 +109,15 @@ function Create() {
    * so editing does not require a database.
    */
 useEffect(() => {
-  const editValue = searchParams.get("edit");
+const editValue = searchParams.get("edit");
 
-  if (!editValue) {
-    return;
-  }
+if (!editValue) {
+  return;
+}
+
+let cancelled = false;
+
+async function loadEditDeck() {
 
   let cancelled = false;
 
