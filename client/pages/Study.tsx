@@ -1,18 +1,26 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useEffect,
+  useState,
+} from "react";
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 import Card from "../components/common/Card";
 import Navbar from "../components/common/Navbar";
 import ProgressBar from "../components/common/ProgressBar";
+import SettingsPanel from "../components/common/SettingsPanel";
+import StudyComplete from "../components/study/StudyComplete";
 
 import type { Deck } from "../../shared/deck.js";
 import type { CompressionStrategyName } from "../utils/compression/types";
 
+import { useSettings } from "../hooks/useSettings";
 import { useStudy } from "../hooks/useStudy";
 
 import { decodeDeck } from "../utils/compression";
 import { createStudyPath } from "../utils/url";
-import StudyComplete from "../components/study/StudyComplete";
 
 type StudyStatus =
   | "loading"
@@ -29,23 +37,24 @@ function isCompressionStrategy(
 }
 
 function Study() {
-  const { strategy, data } = useParams<{
+  const {
+    strategy,
+    data,
+  } = useParams<{
     strategy: string;
     data: string;
   }>();
 
   const navigate = useNavigate();
 
-  const [deck, setDeck] = useState<Deck | null>(
-    null
-  );
+  const [deck, setDeck] =
+    useState<Deck | null>(null);
 
   const [status, setStatus] =
     useState<StudyStatus>("loading");
 
-  const [error, setError] = useState<string | null>(
-    null
-  );
+  const [error, setError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,10 +129,11 @@ function Study() {
       return;
     }
 
-    const studyPath = createStudyPath({
-      strategy,
-      data,
-    });
+    const studyPath =
+      createStudyPath({
+        strategy,
+        data,
+      });
 
     navigate(
       `/create?edit=${encodeURIComponent(
@@ -173,7 +183,9 @@ function Study() {
             <div className="mt-6 flex justify-center gap-3">
               <button
                 type="button"
-                onClick={() => navigate("/")}
+                onClick={() =>
+                  navigate("/")
+                }
                 className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
               >
                 Go Home
@@ -213,28 +225,83 @@ function StudyReady({
   onEdit,
 }: StudyReadyProps) {
   const {
+    settings,
+    setShuffle,
+    setTermsFirst,
+    setAnimation,
+    setTimer,
+    setDifficultOnly: saveDifficultOnly,
+    setDarkMode,
+  } = useSettings();
+
+  const {
     currentCard,
     currentIndex,
     totalCards,
     progress,
+
     isFirstCard,
     isLastCard,
+    isComplete,
+
     next,
     previous,
     restart,
+    finish,
     shuffle,
+
     toggleDifficult,
     isCurrentCardDifficult,
     difficultOnly,
     setDifficultOnly,
-    isComplete,
-    finish,
-  } = useStudy(deck.cards);
+  } = useStudy(deck.cards, {
+    shuffle: settings.shuffle,
+    difficultOnly:
+      settings.difficultOnly,
+  });
 
-  const handleDifficultOnly = () => {
-    setDifficultOnly(
-      !difficultOnly
+  const [
+    cardFlipped,
+    setCardFlipped,
+  ] = useState(!settings.termsFirst);
+
+  /*
+   * Reset the visible side whenever the
+   * current card changes.
+   */
+  useEffect(() => {
+    setCardFlipped(
+      !settings.termsFirst
     );
+  }, [
+    currentIndex,
+    settings.termsFirst,
+  ]);
+
+  const handleShuffleChange = (
+    enabled: boolean
+  ) => {
+    setShuffle(enabled);
+
+    if (enabled) {
+      shuffle();
+    } else {
+      restart();
+    }
+  };
+
+  const handleDifficultOnlyChange = (
+    enabled: boolean
+  ) => {
+    saveDifficultOnly(enabled);
+    setDifficultOnly(enabled);
+  };
+
+  const handleTermsFirstChange = (
+    enabled: boolean
+  ) => {
+    setTermsFirst(enabled);
+    setCardFlipped(!enabled);
   };
 
   if (totalCards === 0) {
@@ -266,15 +333,39 @@ function StudyReady({
             </button>
           </header>
 
-          <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-            <h2 className="text-xl font-semibold">
-              This set has no cards
-            </h2>
+          <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+            <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+              <h2 className="text-xl font-semibold">
+                This set has no cards
+              </h2>
 
-            <p className="mt-2 text-sm text-muted-foreground">
-              Edit the set to add some
-              flashcards.
-            </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Edit the set to add some
+                flashcards.
+              </p>
+            </div>
+
+            <SettingsPanel
+              {...settings}
+              onShuffleChange={
+                handleShuffleChange
+              }
+              onTermsFirstChange={
+                handleTermsFirstChange
+              }
+              onAnimationChange={
+                setAnimation
+              }
+              onTimerChange={
+                setTimer
+              }
+              onDifficultOnlyChange={
+                handleDifficultOnlyChange
+              }
+              onDarkModeChange={
+                setDarkMode
+              }
+            />
           </div>
         </main>
       </div>
@@ -285,7 +376,7 @@ function StudyReady({
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -311,105 +402,162 @@ function StudyReady({
           </div>
         </header>
 
-        <section>
-          <ProgressBar
-            value={progress}
-            label={`Card ${
-              currentIndex + 1
-            } of ${totalCards}`}
-            className="mb-6"
-          />
+        <div className="grid gap-8 lg:grid-cols-[1fr_340px]">
+          <section>
+            <ProgressBar
+              value={progress}
+              label={
+                isComplete
+                  ? `Complete — ${totalCards} of ${totalCards}`
+                  : `Card ${
+                      currentIndex + 1
+                    } of ${totalCards}`
+              }
+              className="mb-6"
+            />
 
-{isComplete ? (
-  <StudyComplete
-    totalCards={totalCards}
-    onRestart={restart}
-    onEdit={onEdit}
-  />
-) : (
-  <>
-    {currentCard && (
-      <Card
-        term={currentCard.term}
-        definition={currentCard.definition}
-      />
-    )}
+            {isComplete ? (
+              <StudyComplete
+                totalCards={totalCards}
+                onRestart={restart}
+                onEdit={onEdit}
+              />
+            ) : (
+              <>
+                {currentCard && (
+                  <Card
+                    term={currentCard.term}
+                    definition={
+                      currentCard.definition
+                    }
+                    flipped={cardFlipped}
+                    onFlip={
+                      setCardFlipped
+                    }
+                    disabled={false}
+                  />
+                )}
 
-    <div className="mt-6 flex items-center justify-center gap-3">
-      <button
-        type="button"
-        onClick={previous}
-        disabled={isFirstCard}
-        className="rounded-lg border border-border px-5 py-3 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        ← Previous
-      </button>
+                <div className="mt-6 flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={previous}
+                    disabled={isFirstCard}
+                    className="rounded-lg border border-border px-5 py-3 text-sm font-medium transition hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    ← Previous
+                  </button>
 
-      <button
-        type="button"
-        onClick={
-          isLastCard ? finish : next
-        }
-        className="rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-      >
-        {isLastCard
-          ? "Finish ✓"
-          : "Next →"}
-      </button>
-    </div>
+                  <button
+                    type="button"
+                    onClick={
+                      isLastCard
+                        ? finish
+                        : next
+                    }
+                    className="rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    {isLastCard
+                      ? "Finish ✓"
+                      : "Next →"}
+                  </button>
+                </div>
 
-    <div className="mt-6 flex flex-wrap justify-center gap-3">
-      {/* existing Shuffle / Restart / Difficult controls */}
-    </div>
-  </>
-)}
+                <div className="mt-6 flex flex-wrap justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={shuffle}
+                    className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Shuffle
+                  </button>
 
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button
-              type="button"
-              onClick={shuffle}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-            >
-              Shuffle
-            </button>
+                  <button
+                    type="button"
+                    onClick={restart}
+                    className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                  >
+                    Restart
+                  </button>
 
-            <button
-              type="button"
-              onClick={restart}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
-            >
-              Restart
-            </button>
+                  <button
+                    type="button"
+                    onClick={
+                      toggleDifficult
+                    }
+                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                      isCurrentCardDifficult
+                        ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
+                        : "border-border hover:bg-muted"
+                    }`}
+                  >
+                    {isCurrentCardDifficult
+                      ? "★ Difficult"
+                      : "☆ Mark Difficult"}
+                  </button>
+                </div>
+              </>
+            )}
+          </section>
 
-            <button
-              type="button"
-              onClick={toggleDifficult}
-              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
-                isCurrentCardDifficult
-                  ? "border-yellow-500 bg-yellow-500/10 text-yellow-700"
-                  : "border-border hover:bg-muted"
-              }`}
-            >
-              {isCurrentCardDifficult
-                ? "★ Difficult"
-                : "☆ Mark Difficult"}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDifficultOnly}
-              className={`rounded-lg border px-4 py-2 text-sm font-medium transition ${
+          <aside className="lg:sticky lg:top-6 lg:self-start">
+            <SettingsPanel
+              shuffle={
+                settings.shuffle
+              }
+              termsFirst={
+                settings.termsFirst
+              }
+              animation={
+                settings.animation
+              }
+              timer={settings.timer}
+              difficultOnly={
                 difficultOnly
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border hover:bg-muted"
-              }`}
-            >
-              {difficultOnly
-                ? "Showing Difficult"
-                : "Difficult Only"}
-            </button>
-          </div>
-        </section>
+              }
+              darkMode={
+                settings.darkMode
+              }
+              onShuffleChange={
+                handleShuffleChange
+              }
+              onTermsFirstChange={
+                handleTermsFirstChange
+              }
+              onAnimationChange={
+                setAnimation
+              }
+              onTimerChange={
+                setTimer
+              }
+              onDifficultOnlyChange={
+                handleDifficultOnlyChange
+              }
+              onDarkModeChange={
+                setDarkMode
+              }
+              footer={
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShuffle(false);
+                    setTermsFirst(true);
+                    setAnimation(true);
+                    setTimer(false);
+                    saveDifficultOnly(false);
+                    setDifficultOnly(false);
+                    setDarkMode(false);
+                    restart();
+                    setCardFlipped(false);
+                  }}
+                  className="w-full rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:bg-muted"
+                >
+                  Reset Study Settings
+                </button>
+              }
+            />
+          </aside>
+        </div>
       </main>
     </div>
   );
