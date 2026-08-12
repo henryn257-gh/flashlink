@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+} from "react-router-dom";
+
+import Home from "./pages/Home";
 
 function RoutePlaceholder({
   name,
@@ -25,10 +31,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={<RoutePlaceholder name="Home" />}
-        />
+        <Route path="/" element={<Home />} />
 
         <Route
           path="/create"
