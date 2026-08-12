@@ -136,10 +136,10 @@ async function loadEditDeck() {
        *
        * /study/single/ABC
        */
-      const editUrl = new URL(
-        editValue,
-        window.location.origin
-      );
+const editUrl = new URL(
+  editUrlValue,
+  window.location.origin
+);
 
       const parts = editUrl.pathname
         .split("/")
