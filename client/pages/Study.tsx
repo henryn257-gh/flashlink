@@ -110,32 +110,22 @@ function Study() {
     };
   }, [strategy, data]);
 
-  const handleEdit = () => {
-    if (
-      !strategy ||
-      !data ||
-      !isCompressionStrategy(strategy)
-    ) {
-      return;
-    }
+const handleEdit = () => {
+  if (
+    !strategy ||
+    !data ||
+    !isCompressionStrategy(strategy)
+  ) {
+    return;
+  }
 
-    /*
-     * Keep the existing compressed study path.
-     *
-     * The Create page can use this value later to
-     * decode the existing deck into editable fields.
-     */
-    const studyPath = createStudyPath({
-      strategy,
-      data,
-    });
+  // Preserve the exact encoded study data.
+  const editPath = `/study/${strategy}/${data}`;
 
-    navigate(
-      `/create?edit=${encodeURIComponent(
-        studyPath
-      )}`
-    );
-  };
+  navigate(
+    `/create?edit=${encodeURIComponent(editPath)}`
+  );
+};
 
   if (status === "loading") {
     return (
