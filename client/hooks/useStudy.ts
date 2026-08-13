@@ -1,3 +1,4 @@
+
 import {
   useCallback,
   useMemo,
@@ -5,6 +6,7 @@ import {
 } from "react";
 
 import type { Card } from "../../shared/deck";
+import { shuffleItems } from "../study/features/shuffle";
 
 interface UseStudyOptions {
   shuffle?: boolean;
@@ -26,7 +28,6 @@ interface UseStudyReturn {
   isFirstCard: boolean;
   isLastCard: boolean;
   isCurrentCardDifficult: boolean;
-
   difficultCards: Set<number>;
   difficultOnly: boolean;
 
@@ -37,23 +38,6 @@ interface UseStudyReturn {
   toggleDifficult: () => void;
 
   setDifficultOnly: (enabled: boolean) => void;
-}
-
-function shuffleCards<T>(items: T[]): T[] {
-  const result = [...items];
-
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(
-      Math.random() * (i + 1)
-    );
-
-    [result[i], result[j]] = [
-      result[j],
-      result[i],
-    ];
-  }
-
-  return result;
 }
 
 export function useStudy(
@@ -83,7 +67,7 @@ export function useStudy(
   const [studyEntries, setStudyEntries] =
     useState<StudyEntry[]>(() =>
       shuffleInitially
-        ? shuffleCards(initialEntries)
+        ? shuffleItems(initialEntries)
         : [...initialEntries]
     );
 
@@ -192,7 +176,7 @@ export function useStudy(
 
   const shuffle = useCallback(() => {
     setStudyEntries((entries) =>
-      shuffleCards(entries)
+      shuffleItems(entries)
     );
 
     setCurrentIndex(0);
@@ -269,3 +253,4 @@ export function useStudy(
     setDifficultOnly,
   };
 }
+
