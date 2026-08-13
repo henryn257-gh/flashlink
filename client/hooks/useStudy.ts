@@ -6,6 +6,11 @@ import {
 } from "react";
 
 import type { Card } from "../../shared/deck";
+import {
+  filterDifficult,
+  isDifficult,
+  toggleDifficult as toggleDifficultCards,
+} from "../study/features/difficult";
 import { shuffleItems } from "../study/features/shuffle";
 
 interface UseStudyOptions {
@@ -106,8 +111,9 @@ export function useStudy(
       return studyEntries;
     }
 
-    return studyEntries.filter((entry) =>
-      difficultCards.has(entry.originalIndex)
+    return filterDifficult(
+      studyEntries,
+      difficultCards
     );
   }, [
     studyEntries,
@@ -146,7 +152,8 @@ export function useStudy(
 
   const isCurrentCardDifficult =
     currentEntry !== null
-      ? difficultCards.has(
+      ? isDifficult(
+          difficultCards,
           currentEntry.originalIndex
         )
       : false;
@@ -190,17 +197,12 @@ export function useStudy(
     const originalIndex =
       currentEntry.originalIndex;
 
-    setDifficultCards((previous) => {
-      const next = new Set(previous);
-
-      if (next.has(originalIndex)) {
-        next.delete(originalIndex);
-      } else {
-        next.add(originalIndex);
-      }
-
-      return next;
-    });
+    setDifficultCards((previous) =>
+      toggleDifficultCards(
+        previous,
+        originalIndex
+      )
+    );
   }, [currentEntry]);
 
   const setDifficultOnly = useCallback(
@@ -253,4 +255,3 @@ export function useStudy(
     setDifficultOnly,
   };
 }
-
